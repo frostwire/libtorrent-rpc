@@ -3,8 +3,8 @@
  * Copyright (c) 2018, FrostWire(R). All rights reserved.
  */
 
-#ifndef LIBTORRENT_RPC_SESSION_RCP_HPP
-#define LIBTORRENT_RPC_SESSION_RCP_HPP
+#ifndef LIBTORRENT_RPC_SESSION_RPC_HPP
+#define LIBTORRENT_RPC_SESSION_RPC_HPP
 
 #include <memory>
 
@@ -12,10 +12,10 @@
 #include <libtorrent/session.hpp>
 #include <libtorrent/aux_/disable_warnings_pop.hpp>
 
-namespace ltrcp
+namespace ltrpc
 {
 
-class session_rcp
+class session_rpc
 {
 
 private:
@@ -25,4 +25,4 @@ private:
 
 }
 
-#endif // LIBTORRENT_RPC_SESSION_RCP_HPP
+#endif // LIBTORRENT_RPC_SESSION_RPC_HPP
