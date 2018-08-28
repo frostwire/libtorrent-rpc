@@ -8,10 +8,6 @@
 
 #include <memory>
 
-#include <libtorrent/aux_/disable_warnings_push.hpp>
-#include <libtorrent/session.hpp>
-#include <libtorrent/aux_/disable_warnings_pop.hpp>
-
 namespace ltrpc
 {
 
@@ -20,9 +16,10 @@ class session_rpc
 
 private:
 
-    std::unique_ptr<lt::session> m_session;
+    class impl;
+    std::unique_ptr<impl> m_impl;
 };
 
-}
+} // ltrpc
 
 #endif // LIBTORRENT_RPC_SESSION_RPC_HPP
