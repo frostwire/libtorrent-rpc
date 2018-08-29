@@ -23,6 +23,7 @@
 
 #include <libtorrent/aux_/disable_warnings_pop.hpp>
 
+using namespace std::placeholders;
 using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
 
@@ -179,25 +180,23 @@ public:
     }
 };
 
-class listener : public std::enable_shared_from_this<listener>
+class http_listener : public std::enable_shared_from_this<http_listener>
 {
 public:
 
-    listener(boost::asio::io_context& ioc, tcp::endpoint endpoint)
+    http_listener(boost::asio::io_context& ioc, tcp::endpoint const& endp)
         : m_acceptor{ioc}
         , m_socket{ioc}
     {
         boost::system::error_code ec;
 
-        // Open the acceptor
-        m_acceptor.open(endpoint.protocol(), ec);
+        m_acceptor.open(endp.protocol(), ec);
         if (ec)
         {
             fail(ec, "open");
             return;
         }
 
-        // Allow address reuse
         m_acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
         if (ec)
         {
@@ -205,15 +204,13 @@ public:
             return;
         }
 
-        // Bind to the server address
-        m_acceptor.bind(endpoint, ec);
+        m_acceptor.bind(endp, ec);
         if (ec)
         {
             fail(ec, "bind");
             return;
         }
 
-        // Start listening for connections
         m_acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
         if (ec)
         {
@@ -222,7 +219,6 @@ public:
         }
     }
 
-    // Start accepting incoming connections
     void run()
     {
         if (!m_acceptor.is_open())
@@ -232,12 +228,8 @@ public:
 
     void do_accept()
     {
-        m_acceptor.async_accept(
-            m_socket,
-            std::bind(
-                &listener::on_accept,
-                shared_from_this(),
-                std::placeholders::_1));
+        m_acceptor.async_accept(m_socket
+            , std::bind(&http_listener::on_accept, shared_from_this(), _1));
     }
 
     void on_accept(boost::system::error_code ec)
@@ -281,7 +273,7 @@ public:
         tcp::endpoint endp{boost::asio::ip::make_address(m_address)
             , std::uint16_t(m_port)};
 
-        std::make_shared<listener>(ioc, endp)->run();
+        std::make_shared<http_listener>(ioc, endp)->run();
 
         std::vector<std::thread> v;
         v.reserve(std::size_t(m_threads - 1));
