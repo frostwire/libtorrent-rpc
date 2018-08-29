@@ -7,6 +7,7 @@
 #define LIBTORRENT_RPC_SESSION_RPC_HPP
 
 #include <memory>
+#include <string>
 
 namespace ltrpc
 {
@@ -15,6 +16,7 @@ class session_rpc
 {
 public:
 
+    session_rpc(std::string address, int port, int threads);
     session_rpc();
     ~session_rpc();
 

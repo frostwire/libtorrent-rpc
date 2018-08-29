@@ -269,32 +269,41 @@ class session_rpc::impl
 {
 public:
 
+    impl(std::string address, int port, int threads)
+        : m_address{std::move(address)}
+        , m_port{port}
+        , m_threads{threads}
+    {}
+
     void run()
     {
-        auto const address = boost::asio::ip::make_address("127.0.0.1");
-        auto const port = 8181;
-        auto const threads = 2;
+        boost::asio::io_context ioc{m_threads};
+        tcp::endpoint endp{boost::asio::ip::make_address(m_address)
+            , std::uint16_t(m_port)};
 
-        boost::asio::io_context ioc{threads};
-
-        std::make_shared<listener>(
-            ioc,
-            tcp::endpoint{address, port})->run();
+        std::make_shared<listener>(ioc, endp)->run();
 
         std::vector<std::thread> v;
-        v.reserve(threads - 1);
-        for (int i = threads - 1; i > 0; --i)
+        v.reserve(std::size_t(m_threads - 1));
+        for (int i = m_threads - 1; i > 0; --i)
             v.emplace_back([&ioc] { ioc.run(); });
         ioc.run();
     }
 
 private:
 
+    std::string m_address;
+    int m_port;
+    int m_threads;
     std::unique_ptr<lt::session> m_session;
 };
 
+session_rpc::session_rpc(std::string address, int port, int threads)
+    : m_impl{new session_rpc::impl(std::move(address), port, threads)}
+{}
+
 session_rpc::session_rpc()
-    : m_impl{new session_rpc::impl()}
+    : session_rpc("127.0.0.1", 8181, 2)
 {}
 
 session_rpc::~session_rpc() = default;
