@@ -13,6 +13,11 @@ namespace ltrpc
 
 class session_rpc
 {
+public:
+
+    session_rpc();
+
+    void run();
 
 private:
 

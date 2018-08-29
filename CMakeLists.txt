@@ -32,3 +32,5 @@ endif()
 target_include_directories(libtorrent-rpc PUBLIC include)
 
 target_link_libraries(libtorrent-rpc PRIVATE torrent-rasterbar)
+
+add_subdirectory(client_test)
