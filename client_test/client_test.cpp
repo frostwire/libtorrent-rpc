@@ -13,6 +13,8 @@ int main()
 {
     session_rpc server;
 
+    server.run();
+
     std::cout << "Hello client_test" << std::endl;
     return 0;
 }

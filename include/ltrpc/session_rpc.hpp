@@ -16,6 +16,7 @@ class session_rpc
 public:
 
     session_rpc();
+    ~session_rpc();
 
     void run();
 

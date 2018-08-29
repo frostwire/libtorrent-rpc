@@ -297,6 +297,8 @@ session_rpc::session_rpc()
     : m_impl{new session_rpc::impl()}
 {}
 
+session_rpc::~session_rpc() = default;
+
 void session_rpc::run()
 {
     m_impl->run();
