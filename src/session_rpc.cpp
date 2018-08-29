@@ -95,23 +95,14 @@ class http_session : public std::enable_shared_from_this<http_session>
         }
     };
 
-    tcp::socket m_socket;
-    boost::asio::strand<
-        boost::asio::io_context::executor_type> m_strand;
-    boost::beast::flat_buffer m_buffer;
-    http::request<http::string_body> m_req;
-    std::shared_ptr<void> m_res;
-    send_lambda m_lambda;
-
 public:
-    // Take ownership of the socket
+
     explicit http_session(tcp::socket socket)
         : m_socket{std::move(socket)}
         , m_strand{m_socket.get_executor()}
         , m_lambda{*this}
     {}
 
-    // Start the asynchronous operation
     void run()
     {
         do_read();
@@ -119,37 +110,31 @@ public:
 
     void do_read()
     {
-        // Make the request empty before reading,
-        // otherwise the operation behavior is undefined.
         m_req = {};
 
-        // Read a request
         http::async_read(m_socket, m_buffer, m_req
-            , boost::asio::bind_executor(
-                m_strand
+            , boost::asio::bind_executor(m_strand
                 , std::bind(&http_session::on_read
-                    , shared_from_this()
-                    , std::placeholders::_1
-                    , std::placeholders::_2)));
+                    , shared_from_this(), _1, _2)));
     }
 
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred)
     {
         boost::ignore_unused(bytes_transferred);
 
-        // This means they closed the connection
+        // this means they closed the connection
         if (ec == http::error::end_of_stream)
             return do_close();
 
         if (ec)
             return fail(ec, "read");
 
-        // Send the response
+        // send the response
         handle_request(std::move(m_req), m_lambda);
     }
 
     void on_write(boost::system::error_code ec, std::size_t bytes_transferred
-        , bool close)
+        , bool const close)
     {
         boost::ignore_unused(bytes_transferred);
 
@@ -158,26 +143,31 @@ public:
 
         if (close)
         {
-            // This means we should close the connection, usually because
+            // this means we should close the connection, usually because
             // the response indicated the "Connection: close" semantic.
             return do_close();
         }
 
-        // We're done with the response so delete it
-        m_res = nullptr;
+        // we're done with the response so delete it
+        m_res.reset();
 
-        // Read another request
         do_read();
     }
 
     void do_close()
     {
-        // Send a TCP shutdown
         boost::system::error_code ec;
         m_socket.shutdown(tcp::socket::shutdown_send, ec);
-
-        // At this point the connection is closed gracefully
     }
+
+private:
+
+    tcp::socket m_socket;
+    boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
+    boost::beast::flat_buffer m_buffer;
+    http::request<http::string_body> m_req;
+    std::shared_ptr<void> m_res;
+    send_lambda m_lambda;
 };
 
 class http_listener : public std::enable_shared_from_this<http_listener>
@@ -240,12 +230,9 @@ public:
         }
         else
         {
-            // Create the session and run it
-            std::make_shared<http_session>(
-                std::move(m_socket))->run();
+            std::make_shared<http_session>(std::move(m_socket))->run();
         }
 
-        // Accept another connection
         do_accept();
     }
 
