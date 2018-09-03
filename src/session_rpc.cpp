@@ -269,6 +269,16 @@ public:
         ioc.run();
     }
 
+    std::string address() const
+    {
+        return m_address;
+    }
+
+    int port() const 
+    {
+        return m_port;
+    }
+
 private:
 
     std::string m_address;
@@ -290,6 +300,16 @@ session_rpc::~session_rpc() = default;
 void session_rpc::run()
 {
     m_impl->run();
+}
+
+std::string session_rpc::address() const
+{
+    return m_impl->address();
+}
+
+int session_rpc::port() const
+{
+    return m_impl->port();
 }
 
 } // ltrpc

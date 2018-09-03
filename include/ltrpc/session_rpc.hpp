@@ -21,6 +21,8 @@ public:
     ~session_rpc();
 
     void run();
+    std::string address() const;
+    int port() const;
 
 private:
 
