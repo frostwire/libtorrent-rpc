@@ -9,6 +9,8 @@
 #include <vector>
 #include <iostream>
 
+#include "ltrpc/settings.hpp"
+
 #include <libtorrent/aux_/disable_warnings_push.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -258,9 +260,10 @@ public:
     {
         auto sett = json::parse(std::move(settings));
 
-        std::string listen_address = sett.value("rpc_listen_address", "127.0.0.1");
-        int listen_port = sett.value("rpc_listen_port", 8181);
-        int num_threads = sett.value("rpc_num_threads", 2);
+        auto const listen_address = sett.value(settings_key::rpc_listen_address
+            , "127.0.0.1");
+        int const listen_port = sett.value(settings_key::rpc_listen_port, 8181);
+        int const num_threads = sett.value(settings_key::rpc_num_threads, 2);
 
         boost::asio::io_context ioc{num_threads};
         tcp::endpoint endp{boost::asio::ip::make_address(listen_address)

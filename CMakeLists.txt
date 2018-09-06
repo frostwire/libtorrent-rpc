@@ -6,18 +6,22 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
         -Werror
         -Weverything
         -Wno-c++98-compat
-        -Wno-c++98-compat-pedantic)
+        -Wno-c++98-compat-pedantic
+        -Wno-global-constructors
+        -Wno-exit-time-destructors)
 endif()
 
 add_subdirectory(libtorrent)
 
 set(include_files
+    settings
     session_rpc)
 
 set(include_aux_files
     aux/json)
 
 set(src_files
+    settings
     session_rpc)
 
 add_library(libtorrent-rpc
