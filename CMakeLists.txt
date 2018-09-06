@@ -14,12 +14,16 @@ add_subdirectory(libtorrent)
 set(include_files
     session_rpc)
 
+set(include_aux_files
+    aux/json)
+
 set(src_files
     session_rpc)
 
 add_library(libtorrent-rpc
     src/$<JOIN:${src_files}, src/>
-    include/ltrpc/$<JOIN:${include_files}, include/ltrpc/>)
+    include/ltrpc/$<JOIN:${include_files}, include/ltrpc/>
+    include/ltrpc/$<JOIN:${include_aux_files}, include/ltrpc/aux>)
 
 if (cxx_std_14 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     target_compile_features(libtorrent-rpc PUBLIC cxx_std_14)
