@@ -21,11 +21,15 @@
 
 #include <libtorrent/session.hpp>
 
+#include "ltrpc/aux/json.hpp"
+
 #include <libtorrent/aux_/disable_warnings_pop.hpp>
 
 using namespace std::placeholders;
 using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
+
+using json = nlohmann::json;
 
 namespace ltrpc
 {
@@ -248,68 +252,41 @@ class session_rpc::impl
 {
 public:
 
-    impl(std::string address, int port, int threads)
-        : m_address{std::move(address)}
-        , m_port{port}
-        , m_threads{threads}
-    {}
+    impl() = default;
 
-    void run()
+    void listen(std::string settings)
     {
-        boost::asio::io_context ioc{m_threads};
-        tcp::endpoint endp{boost::asio::ip::make_address(m_address)
-            , std::uint16_t(m_port)};
+        auto sett = json::parse(std::move(settings));
+
+        std::string listen_address = sett.value("rpc_listen_address", "127.0.0.1");
+        int listen_port = sett.value("rpc_listen_port", 8181);
+        int num_threads = sett.value("rpc_num_threads", 2);
+
+        boost::asio::io_context ioc{num_threads};
+        tcp::endpoint endp{boost::asio::ip::make_address(listen_address)
+            , std::uint16_t(listen_port)};
 
         std::make_shared<http_listener>(ioc, endp)->run();
 
         std::vector<std::thread> v;
-        v.reserve(std::size_t(m_threads - 1));
-        for (int i = m_threads - 1; i > 0; --i)
+        v.reserve(std::size_t(num_threads - 1));
+        for (int i = num_threads - 1; i > 0; --i)
             v.emplace_back([&ioc] { ioc.run(); });
         ioc.run();
     }
 
-    std::string address() const
-    {
-        return m_address;
-    }
-
-    int port() const 
-    {
-        return m_port;
-    }
-
 private:
 
-    std::string m_address;
-    int m_port;
-    int m_threads;
     std::unique_ptr<lt::session> m_session;
 };
 
-session_rpc::session_rpc(std::string address, int port, int threads)
-    : m_impl{new session_rpc::impl(std::move(address), port, threads)}
-{}
-
-session_rpc::session_rpc()
-    : session_rpc("127.0.0.1", 8181, 2)
-{}
+session_rpc::session_rpc() = default;
 
 session_rpc::~session_rpc() = default;
 
-void session_rpc::run()
+void session_rpc::listen(std::string settings)
 {
-    m_impl->run();
-}
-
-std::string session_rpc::address() const
-{
-    return m_impl->address();
-}
-
-int session_rpc::port() const
-{
-    return m_impl->port();
+    m_impl->listen(std::move(settings));
 }
 
 } // ltrpc

@@ -13,8 +13,7 @@ int main()
 {
     session_rpc server;
 
-    std::cout << "Hello client_test (server@" << server.address() << ":" << server.port() << ")" << std::endl;
-    server.run();
+    server.listen();
 
     std::cout << "Hello client_test over" << std::endl;
     return 0;

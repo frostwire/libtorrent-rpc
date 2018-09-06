@@ -16,13 +16,13 @@ class session_rpc
 {
 public:
 
-    session_rpc(std::string address, int port, int threads);
     session_rpc();
     ~session_rpc();
 
-    void run();
-    std::string address() const;
-    int port() const;
+    /**
+     * @param settings a json string with the setting values
+     */
+    void listen(std::string settings = "{}");
 
 private:
 
