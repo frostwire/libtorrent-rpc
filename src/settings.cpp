@@ -8,8 +8,8 @@
 namespace ltrpc
 {
 
-std::string const settings_key::rpc_listen_address = "rpc_listen_address";
-std::string const settings_key::rpc_listen_port = "rpc_listen_port";
-std::string const settings_key::rpc_num_threads = "rpc_num_threads";
+std::string const setting_keys::rpc_listen_address = "rpc_listen_address";
+std::string const setting_keys::rpc_listen_port = "rpc_listen_port";
+std::string const setting_keys::rpc_num_threads = "rpc_num_threads";
 
 } // ltrpc

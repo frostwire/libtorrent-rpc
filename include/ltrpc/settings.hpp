@@ -11,7 +11,7 @@
 namespace ltrpc
 {
 
-struct settings_key
+struct setting_keys
 {
     static std::string const rpc_listen_address;
     static std::string const rpc_listen_port;

@@ -260,10 +260,10 @@ public:
     {
         auto sett = json::parse(std::move(settings));
 
-        auto const listen_address = sett.value(settings_key::rpc_listen_address
+        auto const listen_address = sett.value(setting_keys::rpc_listen_address
             , "127.0.0.1");
-        int const listen_port = sett.value(settings_key::rpc_listen_port, 8181);
-        int const num_threads = sett.value(settings_key::rpc_num_threads, 2);
+        int const listen_port = sett.value(setting_keys::rpc_listen_port, 8181);
+        int const num_threads = sett.value(setting_keys::rpc_num_threads, 2);
 
         boost::asio::io_context ioc{num_threads};
         tcp::endpoint endp{boost::asio::ip::make_address(listen_address)
