@@ -9,8 +9,6 @@
 #include <vector>
 #include <iostream>
 
-#include "ltrpc/settings.hpp"
-
 #include <libtorrent/aux_/disable_warnings_push.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -22,6 +20,8 @@
 #include <boost/beast/version.hpp>
 
 #include <libtorrent/session.hpp>
+#include <libtorrent/address.hpp>
+#include <libtorrent/socket.hpp>
 
 #include "ltrpc/aux/json.hpp"
 
@@ -38,6 +38,10 @@ namespace ltrpc
 
 namespace
 {
+
+std::string const rpc_listen_address = "rpc_listen_address";
+std::string const rpc_listen_port = "rpc_listen_port";
+std::string const rpc_num_threads = "rpc_num_threads";
 
 void fail(boost::system::error_code ec, char const* what)
 {
@@ -258,19 +262,20 @@ public:
 
     void listen(std::string settings)
     {
-        auto sett = json::parse(std::move(settings));
+        auto sett = json::parse(settings);
 
-        auto const listen_address = sett.value(setting_keys::rpc_listen_address
-            , "127.0.0.1");
-        int const listen_port = sett.value(setting_keys::rpc_listen_port, 8181);
-        int const num_threads = sett.value(setting_keys::rpc_num_threads, 2);
+        auto const listen_address = sett.value(rpc_listen_address, "127.0.0.1");
+        int const listen_port = sett.value(rpc_listen_port, 8181);
+        int const num_threads = sett.value(rpc_num_threads, 2);
 
         boost::asio::io_context ioc{num_threads};
-        tcp::endpoint endp{boost::asio::ip::make_address(listen_address)
+        tcp::endpoint endp{lt::make_address(listen_address)
             , std::uint16_t(listen_port)};
 
-        std::make_shared<http_listener>(ioc, endp)->run();
+        auto const listener = std::make_shared<http_listener>(ioc, endp);
+        listener->run();
 
+        // run the I/O service on the requested number of threads
         std::vector<std::thread> v;
         v.reserve(std::size_t(num_threads - 1));
         for (int i = num_threads - 1; i > 0; --i)
