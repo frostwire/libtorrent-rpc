@@ -8,17 +8,20 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
         -Wno-c++98-compat
         -Wno-c++98-compat-pedantic
         -Wno-global-constructors
-        -Wno-exit-time-destructors)
+        -Wno-exit-time-destructors
+        -Wno-padded)
 endif()
 
 add_subdirectory(libtorrent)
 
 set(include_files
     session_rpc
-    aux/json)
+    aux/json
+    aux/json_types)
 
 set(src_files
-    session_rpc)
+    session_rpc
+    aux/json_types)
 
 add_library(libtorrent-rpc
     src/$<JOIN:${src_files}, src/>
