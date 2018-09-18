@@ -17,7 +17,8 @@ add_subdirectory(libtorrent)
 set(include_files
     session_rpc
     aux/json
-    aux/json_types)
+    aux/json_types
+    aux/handle_request)
 
 set(src_files
     session_rpc

@@ -41,6 +41,6 @@ struct adl_serializer<lt::settings_pack>
     }
 };
 
-}
+} // nlohmann
 
 #endif // LIBTORRENT_RPC_JSON_TYPES_HPP

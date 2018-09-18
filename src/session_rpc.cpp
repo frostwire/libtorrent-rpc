@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "ltrpc/aux/json_types.hpp"
+#include "ltrpc/aux/handle_request.hpp"
 
 #include <libtorrent/aux_/disable_warnings_push.hpp>
 
@@ -32,7 +33,9 @@
 #include <libtorrent/aux_/disable_warnings_pop.hpp>
 
 using namespace std::placeholders;
+
 using tcp = boost::asio::ip::tcp;
+
 namespace http = boost::beast::http;
 
 using json = nlohmann::json;
@@ -54,25 +57,6 @@ int const rpc_num_threads_default = 2;
 void fail(boost::system::error_code ec, char const* what)
 {
     std::cerr << what << ": " << ec.message() << "\n";
-}
-
-template<class Body, class Allocator, class Send>
-void handle_request(
-    http::request<Body, http::basic_fields<Allocator>>&& req,
-    Send&& send)
-{
-    auto const ok_message = [&req](boost::beast::string_view msg)
-    {
-        http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = msg.to_string();
-        res.prepare_payload();
-        return res;
-    };
-
-    return send(ok_message("Hello from server"));
 }
 
 class http_session : public std::enable_shared_from_this<http_session>
@@ -148,7 +132,7 @@ public:
             return fail(ec, "read");
 
         // send the response
-        handle_request(std::move(m_req), m_lambda);
+        aux::handle_request(std::move(m_req), m_lambda);
     }
 
     void on_write(boost::system::error_code ec, std::size_t bytes_transferred
