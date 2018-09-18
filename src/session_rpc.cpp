@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 #include "ltrpc/aux/json_types.hpp"
 
@@ -273,6 +274,9 @@ public:
 
         lt::settings_pack sp = sett;
 
+        // in C++ 17 use std::make_unique
+        m_session = std::unique_ptr<lt::session>(new lt::session(sp));
+
         boost::asio::io_context ioc{num_threads};
         tcp::endpoint endp{lt::make_address(listen_address)
             , std::uint16_t(listen_port)};
@@ -293,7 +297,9 @@ private:
     std::unique_ptr<lt::session> m_session;
 };
 
-session_rpc::session_rpc() = default;
+session_rpc::session_rpc()
+    : m_impl{new impl()}
+{}
 
 session_rpc::~session_rpc() = default;
 
