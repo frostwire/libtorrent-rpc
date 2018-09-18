@@ -43,9 +43,13 @@ namespace ltrpc
 namespace
 {
 
-std::string const rpc_listen_address = "rpc_listen_address";
-std::string const rpc_listen_port = "rpc_listen_port";
-std::string const rpc_num_threads = "rpc_num_threads";
+std::string const rpc_listen_address_key = "rpc_listen_address";
+std::string const rpc_listen_port_key = "rpc_listen_port";
+std::string const rpc_num_threads_key = "rpc_num_threads";
+
+std::string const rpc_listen_address_default = "127.0.0.1";
+int const rpc_listen_port_default = 8181;
+int const rpc_num_threads_default = 2;
 
 void fail(boost::system::error_code ec, char const* what)
 {
@@ -264,38 +268,43 @@ public:
 
     impl() = default;
 
-    void listen(std::string const settings)
-    {
-        auto sett = json::parse(settings);
-
-        auto const listen_address = sett.value(rpc_listen_address, "127.0.0.1");
-        int const listen_port = sett.value(rpc_listen_port, 8181);
-        int const num_threads = sett.value(rpc_num_threads, 2);
-
-        lt::settings_pack sp = sett;
-
-        // in C++ 17 use std::make_unique
-        m_session = std::unique_ptr<lt::session>(new lt::session(sp));
-
-        boost::asio::io_context ioc{num_threads};
-        tcp::endpoint endp{lt::make_address(listen_address)
-            , std::uint16_t(listen_port)};
-
-        auto const listener = std::make_shared<http_listener>(ioc, endp);
-        listener->run();
-
-        // run the I/O service on the requested number of threads
-        std::vector<std::thread> v;
-        v.reserve(std::size_t(num_threads - 1));
-        for (int i = num_threads - 1; i > 0; --i)
-            v.emplace_back([&ioc] { ioc.run(); });
-        ioc.run();
-    }
+    void listen(std::string const settings);
 
 private:
 
     std::unique_ptr<lt::session> m_session;
 };
+
+void session_rpc::impl::listen(std::string const settings)
+{
+    auto sett = json::parse(settings);
+
+    auto const listen_address = sett.value(rpc_listen_address_key
+        , rpc_listen_address_default);
+    int const listen_port = sett.value(rpc_listen_port_key
+        , rpc_listen_port_default);
+    int const num_threads = sett.value(rpc_num_threads_key
+        , rpc_num_threads_default);
+
+    lt::settings_pack sp = sett;
+
+    // in C++ 17 use std::make_unique
+    m_session = std::unique_ptr<lt::session>(new lt::session(std::move(sp)));
+
+    boost::asio::io_context ioc{num_threads};
+    tcp::endpoint endp{lt::make_address(listen_address)
+        , std::uint16_t(listen_port)};
+
+    auto const listener = std::make_shared<http_listener>(ioc, endp);
+    listener->run();
+
+    // run the I/O service on the requested number of threads
+    std::vector<std::thread> v;
+    v.reserve(std::size_t(num_threads - 1));
+    for (int i = num_threads - 1; i > 0; --i)
+        v.emplace_back([&ioc] { ioc.run(); });
+    ioc.run();
+}
 
 session_rpc::session_rpc()
     : m_impl{new impl()}
