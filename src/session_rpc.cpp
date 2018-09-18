@@ -303,6 +303,9 @@ session_rpc::session_rpc()
 
 session_rpc::~session_rpc() = default;
 
+session_rpc::session_rpc(session_rpc&&) noexcept = default;
+session_rpc& session_rpc::operator=(session_rpc&&) noexcept = default;
+
 void session_rpc::listen(std::string settings)
 {
     m_impl->listen(std::move(settings));

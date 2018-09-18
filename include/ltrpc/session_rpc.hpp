@@ -19,6 +19,13 @@ public:
     session_rpc();
     ~session_rpc();
 
+    // movable
+    session_rpc(session_rpc&&) noexcept;
+    session_rpc& operator=(session_rpc&&) noexcept;
+    // non-copyable
+    session_rpc(session_rpc const&) = delete;
+    session_rpc& operator=(session_rpc const&) = delete;
+
     /**
      * @param settings a json string with the setting values
      */
