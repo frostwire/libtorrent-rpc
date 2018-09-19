@@ -8,10 +8,14 @@
 
 #include <memory>
 #include <string>
+#include <functional>
 
 namespace ltrpc
 {
 
+/**
+ * This class is not thread-safe.
+ */
 class session_rpc
 {
 public:
@@ -25,6 +29,8 @@ public:
     // non-copyable
     session_rpc(session_rpc const&) = delete;
     session_rpc& operator=(session_rpc const&) = delete;
+
+    void set_error_cb(std::function<void(int, std::string const&)> cb);
 
     /**
      * @param settings a json string with the setting values

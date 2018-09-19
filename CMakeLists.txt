@@ -9,7 +9,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
         -Wno-c++98-compat-pedantic
         -Wno-global-constructors
         -Wno-exit-time-destructors
-        -Wno-padded)
+        -Wno-padded
+        -Wno-weak-vtables)
 endif()
 
 add_subdirectory(libtorrent)

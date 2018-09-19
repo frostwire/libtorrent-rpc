@@ -7,7 +7,6 @@
 
 #include <thread>
 #include <vector>
-#include <iostream>
 #include <memory>
 
 #include "ltrpc/aux/json_types.hpp"
@@ -43,6 +42,14 @@ using json = nlohmann::json;
 namespace ltrpc
 {
 
+struct session_logger
+{
+    virtual void on_error(int ec, std::string const& msg) const = 0;
+
+protected:
+    ~session_logger() = default;
+};
+
 namespace
 {
 
@@ -53,11 +60,6 @@ std::string const rpc_num_threads_key = "rpc_num_threads";
 std::string const rpc_listen_address_default = "127.0.0.1";
 int const rpc_listen_port_default = 8181;
 int const rpc_num_threads_default = 2;
-
-void fail(boost::system::error_code ec, char const* what)
-{
-    std::cerr << what << ": " << ec.message() << "\n";
-}
 
 class http_session : public std::enable_shared_from_this<http_session>
 {
@@ -99,8 +101,9 @@ class http_session : public std::enable_shared_from_this<http_session>
 
 public:
 
-    explicit http_session(tcp::socket socket)
+    explicit http_session(tcp::socket socket, session_logger& logger)
         : m_socket{std::move(socket)}
+        , m_logger{logger}
         , m_strand{m_socket.get_executor()}
         , m_lambda{*this}
     {}
@@ -129,7 +132,10 @@ public:
             return do_close();
 
         if (ec)
-            return fail(ec, "read");
+        {
+            m_logger.on_error(ec.value(), "read");
+            return;
+        }
 
         // send the response
         aux::handle_request(std::move(m_req), m_lambda);
@@ -141,7 +147,10 @@ public:
         boost::ignore_unused(bytes_transferred);
 
         if (ec)
-            return fail(ec, "write");
+        {
+            m_logger.on_error(ec.value(), "write");
+            return;
+        }
 
         if (close)
         {
@@ -165,6 +174,7 @@ public:
 private:
 
     tcp::socket m_socket;
+    session_logger& m_logger;
     boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
     boost::beast::flat_buffer m_buffer;
     http::request<http::string_body> m_req;
@@ -176,37 +186,39 @@ class http_listener : public std::enable_shared_from_this<http_listener>
 {
 public:
 
-    http_listener(boost::asio::io_context& ioc, tcp::endpoint const& endp)
+    http_listener(boost::asio::io_context& ioc, tcp::endpoint const& endp
+        , session_logger& logger)
         : m_acceptor{ioc}
         , m_socket{ioc}
+        , m_logger{logger}
     {
         boost::system::error_code ec;
 
         m_acceptor.open(endp.protocol(), ec);
         if (ec)
         {
-            fail(ec, "open");
+            m_logger.on_error(ec.value(), "open");
             return;
         }
 
         m_acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
         if (ec)
         {
-            fail(ec, "set_option");
+            m_logger.on_error(ec.value(), "set_option");
             return;
         }
 
         m_acceptor.bind(endp, ec);
         if (ec)
         {
-            fail(ec, "bind");
+            m_logger.on_error(ec.value(), "bind");
             return;
         }
 
         m_acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
         if (ec)
         {
-            fail(ec, "listen");
+            m_logger.on_error(ec.value(), "listen");
             return;
         }
     }
@@ -228,11 +240,13 @@ public:
     {
         if (ec)
         {
-            fail(ec, "accept");
+            m_logger.on_error(ec.value(), "accept");
         }
         else
         {
-            std::make_shared<http_session>(std::move(m_socket))->run();
+            auto session = std::make_shared<http_session>(std::move(m_socket)
+                , m_logger);
+            session->run();
         }
 
         do_accept();
@@ -242,22 +256,34 @@ private:
 
     tcp::acceptor m_acceptor;
     tcp::socket m_socket;
+    session_logger& m_logger;
 };
 
 } // anonymous namespace
 
-class session_rpc::impl
+class session_rpc::impl final : public session_logger
 {
 public:
 
     impl() = default;
 
+    void set_error_cb(std::function<void(int, std::string const&)> cb);
+
     void listen(std::string const settings);
+
+    void on_error(int ec, std::string const& msg) const override;
 
 private:
 
+    std::function<void(int, std::string const&)> m_error_cb;
     std::unique_ptr<lt::session> m_session;
 };
+
+void session_rpc::impl::set_error_cb(
+    std::function<void(int, std::string const&)> cb)
+{
+    m_error_cb = std::move(cb);
+}
 
 void session_rpc::impl::listen(std::string const settings)
 {
@@ -279,7 +305,7 @@ void session_rpc::impl::listen(std::string const settings)
     tcp::endpoint endp{lt::make_address(listen_address)
         , std::uint16_t(listen_port)};
 
-    auto const listener = std::make_shared<http_listener>(ioc, endp);
+    auto listener = std::make_shared<http_listener>(ioc, endp, *this);
     listener->run();
 
     // run the I/O service on the requested number of threads
@@ -290,6 +316,12 @@ void session_rpc::impl::listen(std::string const settings)
     ioc.run();
 }
 
+void session_rpc::impl::on_error(int ec, std::string const& msg) const
+{
+    if (m_error_cb)
+        m_error_cb(ec, msg);
+}
+
 session_rpc::session_rpc()
     : m_impl{new impl()}
 {}
@@ -298,6 +330,11 @@ session_rpc::~session_rpc() = default;
 
 session_rpc::session_rpc(session_rpc&&) noexcept = default;
 session_rpc& session_rpc::operator=(session_rpc&&) noexcept = default;
+
+void session_rpc::set_error_cb(std::function<void(int, std::string const&)> cb)
+{
+    m_impl->set_error_cb(std::move(cb));
+}
 
 void session_rpc::listen(std::string settings)
 {
